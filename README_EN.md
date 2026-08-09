@@ -40,4 +40,7 @@ No real API keys or Sheet IDs are included. All fields are replaced with `YOUR_.
 ![Workflow 2](images/workflow2.png)
 
 ## 🎬 Credits & Acknowledgments
-The foundational logic of this workflow was learned following the training by **[Burhan Kocabıyık](https://www.youtube.com/@BurhanKocabiyik)**. The modular structure and custom data enrichment were adapted for specific scraping needs.
+
+The foundational logic and AI Agent structure of this workflow were learned following the comprehensive training **"n8n ile Yapay Zeka Ajanları Kur ve Sat (5 Saatlik Eğitim – Sıfır Kodlama)"** (Build and Sell AI Agents with n8n - 5 Hour Training) by **[Burhan Kocabıyık](https://www.youtube.com/@burhan.kocabiyik)**.
+
+While the core principles from the course were applied, further customization was done based on personal needs and logic. A big thank you for the valuable training content!

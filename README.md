@@ -43,5 +43,8 @@ Bu depo **sadece iş akışı mimarisini** içerir. Tüm API anahtarları, Googl
 **Workflow 2 (Veri İşleme & Yazdırma Servisi):**
 ![Workflow 2](images/workflow2.png)
 
-## 🎬 Teşekkür & Kaynak
-Bu iş akışının temel yapısı öğrenilirken **[Burhan Kocabıyık](https://www.youtube.com/@BurhanKocabiyik)**'ın "n8n ile Yapay Zeka Ajanları Kur ve Sat (5 Saatlik Eğitim)" içeriklerinden faydalanılmıştır. Projenin özelleştirilmesi ve modüler hale getirilmesi kendi ihtiyaçlarıma göre yapılmıştır.
+## 🎬 Teşekkür & Kaynak (Credits)
+
+Bu iş akışının temel yapısı ve AI Agent mantığının öğrenilmesinde, **[Burhan Kocabıyık](https://www.youtube.com/@burhan.kocabiyik)**'ın **"n8n ile Yapay Zeka Ajanları Kur ve Sat (5 Saatlik Eğitim – Sıfır Kodlama)"** başlıklı kapsamlı eğitim videosu rehber alınmıştır.
+
+Projenin son haline getirilmesi sırasında, eğitimden alınan temel prensipler uygulanmış ve kendi ihtiyaçlarıma göre özelleştirilmiştir. Değerli eğitimi için kendisine teşekkür ederim.
