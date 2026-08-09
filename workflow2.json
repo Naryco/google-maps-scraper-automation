@@ -1,0 +1,148 @@
+{
+  "name": "Google Maps Otomasyonu Otomatik Yazdırma",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "input"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "68dd53c0-d70e-4f88-b5b2-787f03c68063",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sub-workflow input beklenen format:\n// $json.input -> JSON string (tek işletme)  VEYA direkt object\n\nconst raw = $json.input;\n\nif (!raw) {\n  return [{\n    json: { _error: \"input gelmedi\", _raw: $json }\n  }];\n}\n\nlet obj = raw;\nif (typeof raw === \"string\") {\n  try {\n    obj = JSON.parse(raw);\n  } catch (e) {\n    return [{\n      json: { _error: \"input JSON parse edilemedi\", _raw: raw }\n    }];\n  }\n}\n\n// Opening hours normalize\nlet opening =\n  obj[\"Opening Hours\"] ??\n  obj.OpeningHours ??\n  obj.openingHours ??\n  obj.opening_hours ??\n  \"N/A\";\n\nlet openingStr = opening;\nif (opening && typeof opening === \"object\") {\n  // {Monday:\"...\", Tuesday:\"...\"} gibi gelirse tek stringe çevir\n  openingStr = Object.entries(opening)\n    .map(([day, hours]) => `${day}: ${hours}`)\n    .join(\" | \");\n}\n\nconst numberRaw = obj.Number ?? obj.phoneNumber ?? obj.number ?? \"N/A\";\nconst number = String(numberRaw).replace(/^\\+/, \"\").trim();\n\nreturn [{\n  json: {\n    UUID: String(obj.UUID ?? obj.uuid ?? obj.placeId ?? obj.place_id ?? obj.cid ?? \"\").trim(),\n    Name: obj.Name ?? obj.title ?? \"N/A\",\n    Background: obj.Background ?? obj.type ?? \"N/A\",\n    Address: obj.Address ?? obj.address ?? \"N/A\",\n    Number: number || \"N/A\",\n    Website: obj.Website ?? obj.website ?? \"N/A\",\n    Rating: obj.Rating ?? obj.rating ?? \"N/A\",\n    \"Opening Hours\": openingStr || \"N/A\",\n    Email: obj.Email ?? obj.email ?? \"N/A\",\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "cb944338-d402-42a3-94ab-a41aea01e670",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Google Maps Otomasyonu"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sayfa1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "UUID\n": "={{ $json.UUID || $execution.id }}",
+            "Name": "={{ $json.Name }}",
+            "Background": "={{ $json.Background }}",
+            "Address": "={{ $json.Address }}",
+            "Number": "={{ $json.Number || \"N/A\" }}",
+            "Website": "={{ $json.Website || \"N/A\" }}",
+            "Rating": "={{ $json.Rating || \"N/A\" }}",
+            "Opening Hours": "={{ $json[\"Opening Hours\"] || \"N/A\" }}",
+            "Email": "={{ $json.Email || 'N/A' }}"
+          },
+          "matchingColumns": []
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        480,
+        0
+      ],
+      "id": "016eeb82-bd32-48bd-a1d6-599df8fc240d",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "YOUR_GOOGLE_SHEETS_ACCOUNT_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { response: \"ok\" } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        736,
+        0
+      ],
+      "id": "db605f83-33bb-4960-a854-9a92c3e6894c",
+      "name": "Code in JavaScript1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "1fd38dca-7207-4856-ad1c-f10a5bd52018",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "53d36c255101696cb40e9f98ea1fc6e16b8b7e6b09f110c13cb5b4ed7a7ea048"
+  },
+  "id": "tUgF6bmVxgjRMM7Y",
+  "tags": []
+}

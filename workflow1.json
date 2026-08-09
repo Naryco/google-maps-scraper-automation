@@ -1,0 +1,222 @@
+{
+  "name": "Google Maps Otomasyonu",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -32,
+        0
+      ],
+      "id": "e00d72c9-81cc-4c11-96cf-7178940fbc89",
+      "name": "When chat message received",
+      "webhookId": "f8923b2a-7f17-4e3e-994c-589278266360"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are an automation agent inside n8n. You DO have access to tools:\n- Map Search Tool (Google Serper Maps API) to search businesses.\n- Call \"Google Maps Otomasyonu Otomatik Yazdırma\" to save ONE business to Google Sheets per call.\n\nRULES (must follow):\n1) NEVER say you cannot access Google Maps or that you cannot do real-time search. Use Map Search Tool instead.\n2) For any user request that asks for businesses/places in a city, ALWAYS call Map Search Tool first.\n3) Extract fields for each place: UUID, Name, Background (short), Address, Number (no leading +), Website, Rating, Opening Hours, Email (or N/A).\n4) Save each business immediately by calling: Call \"Google Maps Otomasyonu Otomatik Yazdırma\"\n   - Send ONLY ONE record per tool call.\n5) Continue until you have the requested count OR there are no more results/pages.\n6) Your final chat response should be short: confirm how many were saved.\n\nIf the user asks specifically for \"nöbetçi eczane\", you must search using keywords like:\n\"nöbetçi eczane <city>\" and also verify from the place title/snippet/website if available.\nIf the user requests a rating range, still search normally but ensure that only places within the requested rating range are returned. If a place does not meet the rating criteria it should be ignored.\n\nIf opening hours, website, email or phone information is missing from the data source, return \"N/A\".\n\nQUERY PARSING RULE:\n\nBefore searching, interpret the user request and extract these parameters:\n\ncity = city mentioned by the user  \ncategory = type of place (restaurant, kebapçı, diş hastanesi, eczane, cafe etc.)  \nlimit = number of businesses requested  \nminRating = minimum rating if specified  \nmaxRating = maximum rating if specified  \n\nExamples:\n\nUser: \"Sakarya'da 3 ile 4 puan arası 15 restoran getir\"\n\n{\n\"city\": \"Sakarya\",\n\"category\": \"restaurant\",\n\"limit\": 15,\n\"minRating\": 3,\n\"maxRating\": 4\n}\n\nUser: \"Konya'da 1 ile 3 puan arası 10 restoran getir\"\n\n{\n\"city\": \"Konya\",\n\"category\": \"restaurant\",\n\"limit\": 10,\n\"minRating\": 1,\n\"maxRating\": 3\n}\n\nUse these values when constructing the Map Search query and filtering results.\nIf rating range is specified, collect more results if necessary until enough places match the rating range.",
+          "maxIterations": 15
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        176,
+        0
+      ],
+      "id": "e72c9c5f-b271-4d1b-ba9e-bfb57581ef1f",
+      "name": "AI Agent",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-5-mini"
+        },
+        "responsesApiEnabled": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        64,
+        176
+      ],
+      "id": "3a55beac-5477-4d57-861e-df19dc77f987",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "YOUR_OPENAI_CREDENTIAL_ID",
+          "name": "YOUR_OPENAI_ACCOUNT_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        208,
+        176
+      ],
+      "id": "b20b35ab-bfb6-4588-8420-874a2041dcd4",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "toolDescription": "This bot helps you extract all contact information for lead generation from Google Maps.\n\nInput parameters:\n\"q\" for the search term (e.g., \"Dental Clinic Amsterdam\").\n\"ll\" for geographic coordinates.\n\"page\" for the current search results page.",
+        "url": "https://google.serper.dev/maps",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters0_Value', ``, 'string') }}"
+            },
+            {
+              "name": "hl",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters2_Value', ``, 'string') }}"
+            },
+            {
+              "name": "page",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters3_Value', ``, 'string') }}"
+            },
+            {
+              "name": "location",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters4_Value', ``, 'string') }}"
+            },
+            {
+              "name": "gl",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('parameters5_Value', ``, 'string') }}"
+            },
+            {
+              "name": "ll",
+              "value": "41.0082,28.9784"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-KEY",
+              "value": "YOUR_SERPER_API_KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        496,
+        176
+      ],
+      "id": "ee94edbc-4c1d-4bdf-a54d-47d5bddf9d27",
+      "name": "Map Search Tool"
+    },
+    {
+      "parameters": {
+        "description": "This is a tool to analyze the input and store it in Google Sheets columns, including:\n{\n  \"Name\": xxx,\n  \"Address\": xxx,\n  \"Number\": xxx,\n  \"Website\": xxx,\n  \"Rating\": xxx,\n  \"Opening Hours\": xxx,\n  \"Email\": xxx\n}",
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "YOUR_WORKFLOW_2_ID",
+          "cachedResultName": "Google Maps Otomasyonu Otomatik Yazdırma"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "input": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('input', ``, 'string') }}"
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        352,
+        176
+      ],
+      "id": "e9d3cdae-b58f-4ec6-945b-d228efeffd6e",
+      "name": "Call 'Google Maps Otomasyonu Otomatik Yazdırma'"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Map Search Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Google Maps Otomasyonu Otomatik Yazdırma'": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "428a0847-18c4-4ac6-835d-9da4a023d38d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "53d36c255101696cb40e9f98ea1fc6e16b8b7e6b09f110c13cb5b4ed7a7ea048"
+  },
+  "id": "N0sgQlE9hcQ9pPkA",
+  "tags": []
+}
