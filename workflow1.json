@@ -8,7 +8,7 @@
       "type": "@n8n/n8n-nodes-langchain.chatTrigger",
       "typeVersion": 1.4,
       "position": [
-        -32,
+        -48,
         0
       ],
       "id": "e00d72c9-81cc-4c11-96cf-7178940fbc89",
@@ -124,6 +124,130 @@
     },
     {
       "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Google Maps Otomasyonu"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sayfa1"
+        },
+        "event": "rowAdded",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTrigger",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        336
+      ],
+      "id": "33035b4e-8888-4384-811e-cec1d3c8c7fb",
+      "name": "Google Sheets Trigger",
+      "credentials": {
+        "googleSheetsTriggerOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_TRIGGER_CREDENTIAL_ID",
+          "name": "YOUR_GOOGLE_SHEETS_TRIGGER_ACCOUNT_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d7f9d19f-76f6-47da-b859-176c7944f268",
+              "leftValue": "={{ $json.Name }}",
+              "rightValue": "Name",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        112,
+        336
+      ],
+      "id": "f928b313-3ccc-434e-ad6a-b65eadc2fc62",
+      "name": "Filter"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        320,
+        336
+      ],
+      "id": "303019a2-7bf3-4da1-bc27-fcc060b015c5",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"sonar\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a research assistant. Get data about a company and return it. If a field doesn't exist, return \\\"N/A\\\" for that field. Return only JSON, without additional information.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Get the email and background for {{$json.Name}} in {{$json.Address}}, reference website: {{$json.Website}}\"\n    }\n  ],\n  \"response_format\": {\n    \"type\": \"json_schema\",\n    \"json_schema\": {\n      \"schema\": {\n        \"$schema\": \"https://json-schema.org/draft-07/schema#\",\n        \"title\": \"CompanyDetails\",\n        \"type\": \"object\",\n        \"properties\": {\n          \"Email\": {\n            \"type\": \"string\"\n          },\n          \"Background\": {\n            \"type\": \"string\"\n          }\n        },\n        \"required\": [\"Email\", \"Background\"]\n      }\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        560,
+        352
+      ],
+      "id": "67ea3ecd-ab2e-4cdc-a74e-796dd6f60ada",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_PERPLEXITY_CREDENTIAL_ID",
+          "name": "YOUR_PERPLEXITY_ACCOUNT_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 0) openingHours'ı her formattan tek satır string'e çevir\nfunction formatOpeningHours(oh) {\n  if (!oh) return \"N/A\";\n\n  if (typeof oh === \"string\") return oh.trim() || \"N/A\";\n\n  if (Array.isArray(oh)) {\n    const s = oh.filter(Boolean).map(String).map(x => x.trim()).filter(Boolean).join(\" | \");\n    return s || \"N/A\";\n  }\n\n  if (typeof oh === \"object\") {\n    // Google tarzı\n    if (Array.isArray(oh.weekday_text)) {\n      const s = oh.weekday_text.map(String).map(x => x.trim()).filter(Boolean).join(\" | \");\n      return s || \"N/A\";\n    }\n\n    // Senin SS'deki gibi: { Thursday: \"8 AM-2 AM\", Friday: \"...\"}\n    const entries = Object.entries(oh)\n      .filter(([k, v]) => typeof v === \"string\" && v.trim() !== \"\")\n      .map(([k, v]) => `${k}: ${v.trim()}`);\n\n    if (entries.length) return entries.join(\" | \");\n  }\n\n  return \"N/A\";\n}\n\n// 1) HTTP Request çıktısından content'i çek\nconst first = $input.first().json;\n\nconst content =\n  first?.choices?.[0]?.message?.content ??\n  first?.choices?.[0]?.text ??\n  first?.message?.content ??\n  first?.content ??\n  \"\";\n\n// 2) ```json ... ``` temizle\nconst cleaned = String(content)\n  .replace(/```json/gi, \"\")\n  .replace(/```/g, \"\")\n  .trim();\n\n// 3) JSON parse (güvenli)\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (e) {\n  return [\n    {\n      json: {\n        _error: \"Model JSON döndürmedi / parse edilemedi\",\n        _raw: cleaned,\n      },\n    },\n  ];\n}\n\n// 4) Array'e çevir\nlet arr;\nif (Array.isArray(parsed)) arr = parsed;\nelse if (parsed && Array.isArray(parsed.data)) arr = parsed.data;\nelse if (parsed && typeof parsed === \"object\") arr = [parsed];\nelse arr = [];\n\n// 5) Normalize + UUID key bozulmalarını düzelt\nconst normalizeOne = (item) => {\n  const uuid =\n    item.UUID ??\n    item[\"UUID\\n\"] ??\n    item[\"UUID\\r\\n\"] ??\n    item[\"UUID \"] ??\n    item.uuid ??\n    item.id ??\n    item.place_id ??\n    item.placeId ??\n    \"\";\n\n  const rawNumber = item.Number ?? item.number ?? item.phoneNumber ?? item.phone ?? \"\";\n  const number = String(rawNumber).replace(/^\\+/, \"\").trim() || \"N/A\";\n\n  // opening hours: hem \"Opening Hours\" hem openingHours hem opening_hours + object support\n  const ohRaw =\n    item[\"Opening Hours\"] ??\n    item.OpeningHours ??\n    item.OpeningHoursText ??\n    item.openingHours ??\n    item.opening_hours ??\n    item.hours ??\n    null;\n\n  return {\n    UUID: String(uuid).trim(),\n    Name: item.Name ?? item.name ?? item.title ?? \"N/A\",\n    Background: item.Background ?? item.background ?? item.type ?? \"N/A\",\n    Address: item.Address ?? item.address ?? \"N/A\",\n    Number: number,\n    Website: item.Website ?? item.website ?? \"N/A\",\n    Rating: item.Rating ?? item.rating ?? \"N/A\",\n\n    // 🔥 Sheet kolon adıyla birebir: \"Opening Hours\"\n    \"Opening Hours\": formatOpeningHours(ohRaw),\n\n    Email: item.Email ?? item.email ?? \"N/A\",\n  };\n};\n\n// 6) n8n'in beklediği şekilde item item döndür\nreturn arr.map((x) => ({ json: normalizeOne(x) }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        768,
+        352
+      ],
+      "id": "8c747f8d-1d67-408c-99f3-0e67948c7b4d",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
         "description": "This is a tool to analyze the input and store it in Google Sheets columns, including:\n{\n  \"Name\": xxx,\n  \"Address\": xxx,\n  \"Number\": xxx,\n  \"Website\": xxx,\n  \"Rating\": xxx,\n  \"Opening Hours\": xxx,\n  \"Email\": xxx\n}",
         "workflowId": {
           "__rl": true,
@@ -146,6 +270,55 @@
       ],
       "id": "e9d3cdae-b58f-4ec6-945b-d228efeffd6e",
       "name": "Call 'Google Maps Otomasyonu Otomatik Yazdırma'"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Google Maps Otomasyonu"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sayfa1"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "UUID\n": "={{ $json.UUID || \"\" }}",
+            "Name": "={{ $json.Name || \"N/A\" }}",
+            "Address": "={{ $json.Address || \"N/A\" }}",
+            "Number": "={{ ($json.Number || \"N/A\").toString().replace(/^\\+/, \"\").trim() }}",
+            "Website": "={{ $json.Website || \"N/A\" }}",
+            "Opening Hours": "={{ $json[\"Opening Hours\"] || \"N/A\" }}",
+            "Rating": "={{ $json.Rating || \"N/A\" }}",
+            "Email": "={{ $json.Email || \"N/A\" }}",
+            "Background": "={{ $json.Background || \"N/A\" }}"
+          },
+          "matchingColumns": [
+            "UUID\n"
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        976,
+        352
+      ],
+      "id": "56b066f9-34c8-4410-894c-1b3372320649",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "YOUR_GOOGLE_SHEETS_ACCOUNT_NAME"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -194,12 +367,79 @@
         ]
       ]
     },
+    "Google Sheets Trigger": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Call 'Google Maps Otomasyonu Otomatik Yazdırma'": {
       "ai_tool": [
         [
           {
             "node": "AI Agent",
             "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
             "index": 0
           }
         ]
@@ -212,7 +452,7 @@
     "binaryMode": "separate",
     "availableInMCP": false
   },
-  "versionId": "428a0847-18c4-4ac6-835d-9da4a023d38d",
+  "versionId": "33d9224d-f778-4c29-adbb-45e7d2836bb6",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "53d36c255101696cb40e9f98ea1fc6e16b8b7e6b09f110c13cb5b4ed7a7ea048"
